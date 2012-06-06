@@ -13,7 +13,7 @@ var assert = require('assert'),
     argv = require('optimist').argv,
     request = require('request'),
     vows = require('vows'),
-    websocket = require('../vendor/websocket'),
+    WebSocket = require('ws'),
     httpProxy = require('../lib/node-http-proxy');
 
 var loadHttps = exports.loadHttps = function () {
@@ -171,10 +171,10 @@ TestRunner.prototype.webSocketTest = function (options) {
   var self = this;
   
   this.startTargetServer(options.ports.target, 'hello websocket', function (err, target) {
-    var socket = options.io.listen(target);
+    var server = new WebSocket.Server({ port:options.ports.target });
 
     if (options.onListen) {
-      options.onListen(socket);
+      options.onListen(server);
     }
 
     self.startProxyServer(
@@ -188,9 +188,13 @@ TestRunner.prototype.webSocketTest = function (options) {
         // Setup the web socket against our proxy
         //
         var uri = options.wsprotocol + '://' + options.host + ':' + options.ports.proxy;
-        var ws = new websocket.WebSocket(uri + '/socket.io/websocket/', 'borf', {
+        console.log('URI', uri);
+        var ws = new WebSocket(uri, {
           origin: options.protocol + '://' + options.host
         });
+        debugger;
+        ws.on('error', console.log);
+        ws.on('close', console.log);
         
         if (options.onWsupgrade) { ws.on('wsupgrade', options.onWsupgrade) }
         if (options.onMessage) { ws.on('message', options.onMessage) }
@@ -223,7 +227,7 @@ TestRunner.prototype.webSocketTestWithTable = function (options) {
         // Setup the web socket against our proxy
         //
         var uri = options.wsprotocol + '://' + options.host + ':' + options.ports.proxy;
-        var ws = new websocket.WebSocket(uri + '/socket.io/websocket/', 'borf', {
+        var ws = new WebSocket(uri, {
           origin: options.protocol + '://' + options.host
         });
         
@@ -339,7 +343,7 @@ TestRunner.prototype.startTargetServer = function (port, output, callback) {
   var that = this, 
       targetServer, 
       handler;
-      
+
   handler = function (req, res) {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.write(output);

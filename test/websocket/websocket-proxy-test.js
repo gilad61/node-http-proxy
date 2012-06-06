@@ -30,18 +30,7 @@ var util = require('util'),
     colors = require('colors'),
     request = require('request'),
     vows = require('vows'),
-    websocket = require('../../vendor/websocket'),
     helpers = require('../helpers');
-
-try {
-  var utils = require('socket.io/lib/socket.io/utils'),
-      io = require('socket.io');
-}
-catch (ex) {
-  console.error('Socket.io is required for this example:');
-  console.error('npm ' + 'install'.green + ' socket.io@0.6.17'.magenta);
-  process.exit(1);
-}
 
 var options = helpers.parseProtocol(),
     testName = [options.source.protocols.ws, options.target.protocols.ws].join('-to-'),
@@ -56,7 +45,6 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
               headers = {};
 
           runner.webSocketTest({
-            io: io,
             host: 'localhost',
             wsprotocol: options.source.protocols.ws,
             protocol: options.source.protocols.http,
@@ -76,7 +64,8 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
               headers.response = res.headers;
             },
             onOpen: function (ws) {
-              ws.send(utils.encode('from client'));
+              console.log('Opened');
+              ws.send('from client');
             }
           });
         },
@@ -95,7 +84,6 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
               headers = {};
 
           runner.webSocketTest({
-            io: io,
             host: 'localhost',
             wsprotocol: options.source.protocols.ws,
             protocol: options.source.protocols.http,
@@ -109,12 +97,12 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
               });
             },
             onOpen: function (ws) {
-              ws.send(utils.encode('from client'));
+              ws.send('from client');
             }
           });
         },
         "should raise the `websocket:incoming` event": function (ign, data) {
-          assert.equal(utils.decode(data.toString().replace('\u0000', '')), 'from client');
+          assert.equal(data.toString().replace('\u0000', ''), 'from client');
         },
       },
       "when an outbound message is sent from the target server": {
@@ -123,7 +111,6 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
               headers = {};
 
           runner.webSocketTest({
-            io: io,
             host: 'localhost',
             wsprotocol: options.source.protocols.ws,
             protocol: options.source.protocols.http,
@@ -141,7 +128,6 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
               headers.response = res.headers;
             },
             onMessage: function (msg) {
-              msg = utils.decode(msg);
               if (!/\d+/.test(msg)) {
                 that.callback(null, msg, headers);
               }
