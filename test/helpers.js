@@ -171,7 +171,7 @@ TestRunner.prototype.webSocketTest = function (options) {
   var self = this;
   
   this.startTargetServer(options.ports.target, 'hello websocket', function (err, target) {
-    var server = new WebSocket.Server({ port:options.ports.target });
+    var server = new WebSocket.Server({ server:target });
 
     if (options.onListen) {
       options.onListen(server);
@@ -188,11 +188,9 @@ TestRunner.prototype.webSocketTest = function (options) {
         // Setup the web socket against our proxy
         //
         var uri = options.wsprotocol + '://' + options.host + ':' + options.ports.proxy;
-        console.log('URI', uri);
         var ws = new WebSocket(uri, {
           origin: options.protocol + '://' + options.host
         });
-        debugger;
         ws.on('error', console.log);
         ws.on('close', console.log);
         
