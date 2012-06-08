@@ -64,7 +64,6 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
               headers.response = res.headers;
             },
             onOpen: function (ws) {
-              console.log('Opened');
               ws.send('from client');
             }
           });
@@ -120,7 +119,7 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
             },
             onListen: function (socket) {
               socket.on('connection', function (client) {
-                socket.broadcast('from server');
+                client.send('from server');
               });
             },
             onWsupgrade: function (req, res) {
@@ -136,6 +135,44 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
         },
         "the client should receive the message": function (err, msg, headers) {
           assert.equal(msg, 'from server');
+        },
+        "the origin and sec-websocket-origin headers should match": function (err, msg, headers) {
+          assert.isString(headers.response['sec-websocket-location']);
+          assert.isTrue(headers.response['sec-websocket-location'].indexOf(options.source.protocols.ws) !== -1);
+          assert.equal(headers.request.Origin, headers.response['sec-websocket-origin']);
+        }
+      },
+      "when an inbound message is sent from a Socket.io client": {
+        topic: function () {
+          var that = this
+              headers = {};
+
+          runner.webSocketIOTest({
+            host: 'localhost',
+            wsprotocol: options.source.protocols.ws,
+            protocol: options.source.protocols.http,
+            ports: {
+              target: 8136,
+              proxy: 8137
+            },
+            onListen: function (socket) {
+              socket.on('connection', function (client) {
+                client.on('message', function (msg) {
+                  that.callback(null, msg, headers);
+                });
+              });
+            },
+            onWsupgrade: function (req, res) {
+              headers.request = req;
+              headers.response = res.headers;
+            },
+            onOpen: function (ws) {
+              ws.send('from client');
+            }
+          });
+        },
+        "the target server should receive the message": function (err, msg, headers) {
+          assert.equal(msg, 'from client');
         },
         "the origin and sec-websocket-origin headers should match": function (err, msg, headers) {
           assert.isString(headers.response['sec-websocket-location']);

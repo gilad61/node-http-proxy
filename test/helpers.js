@@ -14,6 +14,8 @@ var assert = require('assert'),
     request = require('request'),
     vows = require('vows'),
     WebSocket = require('ws'),
+    SocketIo = require('socket.io'),
+    SocketIoClient = require('socket.io-client'),
     httpProxy = require('../lib/node-http-proxy');
 
 var loadHttps = exports.loadHttps = function () {
@@ -191,8 +193,6 @@ TestRunner.prototype.webSocketTest = function (options) {
         var ws = new WebSocket(uri, {
           origin: options.protocol + '://' + options.host
         });
-        ws.on('error', console.log);
-        ws.on('close', console.log);
         
         if (options.onWsupgrade) { ws.on('wsupgrade', options.onWsupgrade) }
         if (options.onMessage) { ws.on('message', options.onMessage) }
@@ -200,7 +200,7 @@ TestRunner.prototype.webSocketTest = function (options) {
       }
     );
   });
-}
+};
 
 //
 // WebSocketTestWithTable
@@ -209,7 +209,7 @@ TestRunner.prototype.webSocketTestWithTable = function (options) {
   var self = this;
   
   this.startTargetServer(options.ports.target, 'hello websocket', function (err, target) {
-    var socket = options.io.listen(target);
+    var socket = new WebSocket.Server({ server:target });
 
     if (options.onListen) {
       options.onListen(socket);
@@ -235,7 +235,41 @@ TestRunner.prototype.webSocketTestWithTable = function (options) {
       }
     );
   });
-}
+};
+
+//
+// Websocket Test using socket.io
+//
+TestRunner.prototype.webSocketIOTest = function (options) {
+  var self = this;
+
+  this.startTargetServer(options.ports.target, 'hello websocket', function (err, target) {
+    var socket = SocketIo.listen(target);
+
+    if (options.onListen) {
+      options.onListen(socket);
+    }
+
+    self.startProxyServer(
+      options.ports.proxy,
+      options.ports.target,
+      options.host,
+      function (err, proxy) {
+        if (options.onServer) { options.onServer(proxy) }
+
+        //
+        // Setup the web socket against our proxy
+        //
+        var uri = options.wsprotocol + '://' + options.host + ':' + options.ports.proxy;
+        var ws = SocketIoClient.connect(uri);
+
+        if (options.onWsupgrade) { ws.on('wsupgrade', options.onWsupgrade) }
+        if (options.onMessage) { ws.on('message', options.onMessage) }
+        if (options.onOpen) { ws.on('connect', function () { options.onOpen(ws) }) }
+      }
+    );
+  });
+};
 
 //
 // Creates the reverse proxy server
