@@ -54,33 +54,48 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
             },
             onListen: function (socket) {
               socket.on('connection', function (client) {
+                headers.request = client.upgradeReq.headers;
                 client.on('message', function (msg) {
                   that.callback(null, msg, headers);
                 });
               });
             },
-            onWsupgrade: function (req, res) {
-              headers.request = req;
-              headers.response = res.headers;
-            },
             onOpen: function (ws) {
               ws.send('from client');
+            },
+            onServer: function (server) {
+              server.proxy.on('websocket:incoming',function(proxy){
+                headers.response = proxy.res.headers;
+              });
             }
           });
         },
         "the target server should receive the message": function (err, msg, headers) {
+          assert.isNull(err);
           assert.equal(msg, 'from client');
         },
-        "the origin and sec-websocket-origin headers should match": function (err, msg, headers) {
-          assert.isString(headers.response['sec-websocket-location']);
-          assert.isTrue(headers.response['sec-websocket-location'].indexOf(options.source.protocols.ws) !== -1);
-          assert.equal(headers.request.Origin, headers.response['sec-websocket-origin']);
+        "the headers for request should be valid": function (err, msg, headers) {
+          assert.isNull(err);
+          assert.isString(headers.request.connection);
+          assert.isString(headers.request.upgrade);
+          assert.equal('Upgrade', headers.request.connection);
+          assert.equal('websocket', headers.request.upgrade);
+        },
+        "the headers for response should be valid": function (err, msg, headers) {
+          assert.isNull(err);
+          assert.isString(headers.response.connection);
+          assert.isString(headers.response.upgrade);
+          assert.equal('Upgrade', headers.response.connection);
+          assert.equal('websocket', headers.response.upgrade);
+        },
+        "the response should have the 'sec-websocket-accept' header": function (err, msg, headers) {
+          assert.isNull(err);
+          assert.isString(headers.response['sec-websocket-accept']);
         }
       },
       "when an inbound message is sent from a WebSocket client with event listeners": {
         topic: function () {
-          var that = this
-              headers = {};
+          var that = this;
 
           runner.webSocketTest({
             host: 'localhost',
@@ -119,12 +134,9 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
             },
             onListen: function (socket) {
               socket.on('connection', function (client) {
+                headers.request = client.upgradeReq.headers;
                 client.send('from server');
               });
-            },
-            onWsupgrade: function (req, res) {
-              headers.request = req;
-              headers.response = res.headers;
             },
             onMessage: function (msg) {
               if (!/\d+/.test(msg)) {
@@ -141,7 +153,7 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
           assert.isTrue(headers.response['sec-websocket-location'].indexOf(options.source.protocols.ws) !== -1);
           assert.equal(headers.request.Origin, headers.response['sec-websocket-origin']);
         }
-      },
+      }/**,
       "when an inbound message is sent from a Socket.io client": {
         topic: function () {
           var that = this
@@ -156,8 +168,11 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
               proxy: 8137
             },
             onListen: function (socket) {
+              debugger;
               socket.on('connection', function (client) {
+                debugger;
                 client.on('message', function (msg) {
+                  debugger;
                   that.callback(null, msg, headers);
                 });
               });
@@ -179,7 +194,7 @@ vows.describe('node-http-proxy/http-proxy/' + testName).addBatch({
           assert.isTrue(headers.response['sec-websocket-location'].indexOf(options.source.protocols.ws) !== -1);
           assert.equal(headers.request.Origin, headers.response['sec-websocket-origin']);
         }
-      }
+      }**/
     }
   }
 }).addBatch({

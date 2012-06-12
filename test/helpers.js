@@ -191,7 +191,7 @@ TestRunner.prototype.webSocketTest = function (options) {
         //
         var uri = options.wsprotocol + '://' + options.host + ':' + options.ports.proxy;
         var ws = new WebSocket(uri, {
-          origin: options.protocol + '://' + options.host
+          origin: options.wsprotocol + '://' + options.host
         });
         
         if (options.onWsupgrade) { ws.on('wsupgrade', options.onWsupgrade) }
